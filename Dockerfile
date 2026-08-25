@@ -30,6 +30,7 @@ RUN npm install && npm run build
 # Storage permissions
 RUN mkdir -p storage/framework/{cache,sessions,views,testing} \
     && mkdir -p storage/logs \
+    && mkdir -p bootstrap/cache \
     && chmod -R 775 storage \
     && chmod -R 775 bootstrap/cache
 
