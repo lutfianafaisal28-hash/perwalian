@@ -18,21 +18,20 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /app
 
-# Copy composer files first for caching
-COPY composer.json composer.lock ./
-RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --optimize-autoloader
-
-# Copy application files
+# Copy ALL application files first
 COPY . .
 
-# Build frontend assets
+# Install composer dependencies
+RUN COMPOSER_ALLOW_SUPERUSER=1 composer install --no-dev --no-interaction --optimize-autoloader
+
+# Install and build frontend assets
 RUN npm install && npm run build
 
-# Generate app key and optimize
-RUN php artisan key:generate --force || true
-RUN php artisan config:cache || true
-RUN php artisan route:cache || true
-RUN php artisan view:cache || true
+# Storage permissions
+RUN mkdir -p storage/framework/{cache,sessions,views,testing} \
+    && mkdir -p storage/logs \
+    && chmod -R 775 storage \
+    && chmod -R 775 bootstrap/cache
 
 EXPOSE 8000
 
