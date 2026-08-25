@@ -26,6 +26,9 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        if (User::count() > 0) {
+            return;
+        }
         // ===== 1. AKUN ADMIN =====
         // User::factory()->create() = buat 1 baris user dengan data
         // tertentu (mengisi kolom yang tidak disebut otomatis/random).
