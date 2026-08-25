@@ -36,14 +36,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        if (str_starts_with(config('app.url', ''), 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-            return;
-        }
-
-        $proto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? $_SERVER['REQUEST_SCHEME'] ?? '';
-        if ($proto === 'https' || request()->isSecure()) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
-        }
+        //
     }
 }

@@ -11,6 +11,7 @@ $app = Application::configure(basePath: dirname(__DIR__, 2))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        $middleware->prepend(\App\Http\Middleware\ForceHttps::class);
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);
