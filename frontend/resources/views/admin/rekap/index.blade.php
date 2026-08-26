@@ -57,7 +57,7 @@
         <div class="d-flex gap-2">
             {{-- Export CSV mengikuti filter aktif (request()->query()) --}}
             <a href="{{ route('admin.rekap.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-download me-1"></i> Export CSV
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
             </a>
             <a href="{{ route('admin.rekap.index') }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-clockwise me-1"></i> Reset

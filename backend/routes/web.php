@@ -67,6 +67,9 @@ Route::middleware('auth')->group(function () {
         Route::resource('mahasiswa', AdminMahasiswaController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);
 
+        // Export dosen harus SEBELUM resource agar tidak tertelan {dosen}
+        Route::get('dosen/export', [AdminDosenController::class, 'exportCsv'])->name('dosen.export');
+
         // CRUD dosen (sama seperti mahasiswa di atas)
         Route::resource('dosen', AdminDosenController::class)
             ->only(['index', 'create', 'store', 'show', 'edit', 'update', 'destroy']);

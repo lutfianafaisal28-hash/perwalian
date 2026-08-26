@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\User;
+use App\Services\ExcelExportService;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 // ============================================================
 // CONTROLLER KELOLA DATA DOSEN (Sisi Admin)
@@ -74,6 +77,61 @@ class DosenController extends Controller
         return redirect()
             ->route('admin.dosen.index')
             ->with('success', 'Data dosen berhasil ditambahkan. Password default: '.$password);
+    }
+
+    // ===== EKSPOR DATA DOSEN KE XLSX ELEGANT (GET /admin/dosen/export) =====
+    public function exportCsv(Request $request)
+    {
+        $query = Dosen::query()->withCount('mahasiswaBimbingan');
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('nidn', 'ilike', "%{$search}%")->orWhere('nama', 'ilike', "%{$search}%");
+            });
+        }
+        $dosen = $query->latest()->get();
+        $filename = 'data-dosen-'.date('Y-m-d').'.xlsx';
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        ExcelExportService::setupSheet($sheet, 'Data Dosen', 'Dosen');
+
+        $row = 1;
+        $lastCol = 'E';
+        ExcelExportService::addTitleBlock($sheet, 'Data Dosen — SI Perwalian STMIK Bandung', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Total: '.$dosen->count().' dosen'.($request->input('search') ? '  •  Filter: "'.$request->input('search').'"' : ''), $lastCol, $row);
+
+        $headerRow = $row;
+        foreach (['No','NIDN','Nama Lengkap','Email','Jml. Bimbingan'] as $i => $h) {
+            $col = chr(65+$i);
+            $sheet->setCellValue($col.$headerRow, $h);
+        }
+        ExcelExportService::styleHeaderRow($sheet, "A{$headerRow}:{$lastCol}{$headerRow}");
+
+        $r = $headerRow + 1;
+        foreach ($dosen as $idx => $d) {
+            $sheet->setCellValue("A{$r}", $idx+1);
+            $sheet->setCellValue("B{$r}", $d->nidn);
+            $sheet->setCellValue("C{$r}", $d->nama);
+            $sheet->setCellValue("D{$r}", $d->user?->email ?? '—');
+            $sheet->setCellValue("E{$r}", $d->mahasiswa_bimbingan_count);
+            $sheet->getRowDimension($r)->setRowHeight(18);
+            $r++;
+        }
+        $lastDataRow = max($r-1, $headerRow);
+        if ($dosen->isNotEmpty()) {
+            ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
+            $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("E".($headerRow+1).":E{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        } else {
+            $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data.');
+            $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
+            $lastDataRow = $headerRow+1;
+        }
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>16,'C'=>30,'D'=>28,'E'=>14]);
+        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
+        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+
+        return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
 
     // ===== DETAIL DOSEN (GET /admin/dosen/{dosen}) =====

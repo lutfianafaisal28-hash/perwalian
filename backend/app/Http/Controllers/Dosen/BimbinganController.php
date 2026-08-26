@@ -6,7 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\Dosen;
 use App\Models\Mahasiswa;
 use App\Models\Perwalian;
+use App\Services\ExcelExportService;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 // ============================================================
 // CONTROLLER BIMBINGAN (Sisi Dosen)
@@ -54,64 +57,80 @@ class BimbinganController extends Controller
         return view('dosen.bimbingan.index', compact('mahasiswa', 'angkatanList'));
     }
 
-    // ===== EKSPOR DATA BIMBINGAN KE CSV (GET /dosen/bimbingan/export) =====
+    // ===== EKSPOR DATA BIMBINGAN KE XLSX ELEGANT (GET /dosen/bimbingan/export) =====
     public function exportCsv(Request $request)
     {
         $dosen = auth()->user()->dosen()->first();
-
         $query = $dosen->mahasiswaBimbingan()->withCount('perwalian');
-
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
-                $q->where('npm', 'ilike', "%{$search}%")
-                    ->orWhere('nama', 'ilike', "%{$search}%")
-                    ->orWhere('prodi', 'ilike', "%{$search}%");
+                $q->where('npm', 'ilike', "%{$search}%")->orWhere('nama', 'ilike', "%{$search}%")->orWhere('prodi', 'ilike', "%{$search}%");
             });
         }
-
         if ($request->filled('angkatan')) {
             $query->where('angkatan', $request->input('angkatan'));
         }
-
-        // Preload relasi perwalian agar isi catatan bisa ikut diekspor
         $mahasiswa = $query->with('perwalian')->orderBy('nama')->get();
+        $filename = 'mahasiswa-bimbingan-'.date('Y-m-d').'.xlsx';
 
-        $filename = 'mahasiswa-bimbingan-'.date('Y-m-d').'.csv';
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        ExcelExportService::setupSheet($sheet, 'Bimbingan', 'Bimbingan');
 
-        return response()->streamDownload(function () use ($mahasiswa) {
-            $out = fopen('php://output', 'w');
-            // BOM UTF-8 agar aman dibuka di Excel
-            fwrite($out, "\xEF\xBB\xBF");
+        $row = 1;
+        $lastCol = 'I';
+        ExcelExportService::addTitleBlock($sheet, 'Mahasiswa Bimbingan — '.$dosen->nama.' (STMIK Bandung)', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Total: '.$mahasiswa->count().' mahasiswa', $lastCol, $row);
 
-            fputcsv($out, ['NPM', 'Nama', 'Program Studi', 'Angkatan', 'Tanggal', 'Semester', 'Hasil Diskusi', 'Kendala', 'Rencana Perbaikan']);
+        $headerRow = $row;
+        foreach (['No','NPM','Nama','Program Studi','Angkatan','Tanggal','Semester','Hasil Diskusi','Kendala / Rencana'] as $i => $h) {
+            $sheet->setCellValue(chr(65+$i).$headerRow, $h);
+        }
+        ExcelExportService::styleHeaderRow($sheet, "A{$headerRow}:{$lastCol}{$headerRow}");
 
-            foreach ($mahasiswa as $m) {
-                // Jika mahasiswa BELUM punya catatan perwalian:
-                // tetap tulis satu baris (data mahasiswa + kolom kosong).
-                if ($m->perwalian->isEmpty()) {
-                    fputcsv($out, [$m->npm, $m->nama, $m->prodi, $m->angkatan, '', '', '', '', '']);
-                    continue;
-                }
-
-                // Jika punya catatan: satu baris PER catatan perwalian,
-                // supaya isi diskusi (hasil, kendala, rencana) ikut terlihat.
-                foreach ($m->perwalian as $p) {
-                    fputcsv($out, [
-                        $m->npm,
-                        $m->nama,
-                        $m->prodi,
-                        $m->angkatan,
-                        $p->tanggal?->toDateString() ?? '',
-                        $p->semester,
-                        $p->hasil_perwalian,
-                        $p->kendala ?? '',
-                        $p->rencana_perbaikan ?? '',
-                    ]);
-                }
+        $r = $headerRow + 1;
+        $no = 1;
+        foreach ($mahasiswa as $m) {
+            if ($m->perwalian->isEmpty()) {
+                $sheet->setCellValue("A{$r}", $no++);
+                $sheet->setCellValue("B{$r}", $m->npm);
+                $sheet->setCellValue("C{$r}", $m->nama);
+                $sheet->setCellValue("D{$r}", $m->prodi);
+                $sheet->setCellValue("E{$r}", $m->angkatan);
+                $sheet->setCellValue("F{$r}", '—');
+                $sheet->setCellValue("G{$r}", '—');
+                $sheet->setCellValue("H{$r}", 'Belum ada catatan perwalian');
+                $sheet->setCellValue("I{$r}", '—');
+                $sheet->getRowDimension($r)->setRowHeight(18);
+                $r++;
+                continue;
             }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+            foreach ($m->perwalian as $p) {
+                $sheet->setCellValue("A{$r}", $no++);
+                $sheet->setCellValue("B{$r}", $m->npm);
+                $sheet->setCellValue("C{$r}", $m->nama);
+                $sheet->setCellValue("D{$r}", $m->prodi);
+                $sheet->setCellValue("E{$r}", $m->angkatan);
+                $sheet->setCellValue("F{$r}", $p->tanggal?->translatedFormat('d MMM yyyy') ?? '');
+                $sheet->setCellValue("G{$r}", 'Semester '.$p->semester);
+                $sheet->setCellValue("H{$r}", $p->hasil_perwalian);
+                $sheet->setCellValue("I{$r}", ($p->kendala ? "Kendala: {$p->kendala}\n" : '').($p->rencana_perbaikan ? "Rencana: {$p->rencana_perbaikan}" : '—'));
+                $sheet->getRowDimension($r)->setRowHeight(36);
+                $r++;
+            }
+        }
+        $lastDataRow = max($r-1, $headerRow);
+        if ($mahasiswa->isNotEmpty()) {
+            ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
+            $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("E".($headerRow+1).":G{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("H".($headerRow+1).":I{$lastDataRow}")->getAlignment()->setWrapText(true);
+        }
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>13,'C'=>24,'D'=>20,'E'=>10,'F'=>13,'G'=>11,'H'=>40,'I'=>36]);
+        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian');
+        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+
+        return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
 
     // ===== DETAIL BIMBINGAN SATU MAHASISWA (GET /dosen/bimbingan/{mahasiswa}) =====

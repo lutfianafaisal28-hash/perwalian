@@ -38,7 +38,7 @@
         <div class="d-flex gap-2">
             {{-- Export CSV membawa query filter yang sama (search & angkatan) --}}
             <a href="{{ route('dosen.bimbingan.export', request()->query()) }}" class="btn btn-sm btn-outline-secondary">
-                <i class="bi bi-download me-1"></i> Export CSV
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
             </a>
             {{-- Reset: kembali ke halaman tanpa filter --}}
             <a href="{{ route('dosen.bimbingan.index') }}" class="btn btn-sm btn-outline-secondary">

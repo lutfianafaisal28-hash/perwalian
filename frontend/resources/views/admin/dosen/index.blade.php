@@ -19,9 +19,14 @@
             </div>
             <button class="btn btn-primary" type="submit">Cari</button>
         </form>
-        <a href="{{ route('admin.dosen.create') }}" class="btn btn-success">
-            <i class="bi bi-plus-lg me-1"></i> Tambah Dosen
-        </a>
+        <div class="d-flex gap-2">
+            <a href="{{ route('admin.dosen.export', request()->query()) }}" class="btn btn-outline-secondary">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+            </a>
+            <a href="{{ route('admin.dosen.create') }}" class="btn btn-success">
+                <i class="bi bi-plus-lg me-1"></i> Tambah Dosen
+            </a>
+        </div>
     </div>
 
     {{-- ===== TABEL DAFTAR DOSEN ===== --}}

@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Mahasiswa;
 use App\Models\User;
+use App\Services\ExcelExportService;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 
 // ============================================================
 // CONTROLLER KELOLA DATA MAHASISWA (Sisi Admin)
@@ -50,12 +53,10 @@ class MahasiswaController extends Controller
         return view('admin.mahasiswa.index', compact('mahasiswa'));
     }
 
-    // ===== EKSPOR DAFTAR MAHASISWA KE CSV (GET /admin/mahasiswa/export) =====
+    // ===== EKSPOR DAFTAR MAHASISWA KE XLSX ELEGANT (GET /admin/mahasiswa/export) =====
     public function exportCsv(Request $request)
     {
-        // Query yang sama seperti index, tapi tanpa paginasi
         $query = Mahasiswa::with('dosenWali.dosen');
-
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($search) {
@@ -65,38 +66,55 @@ class MahasiswaController extends Controller
                     ->orWhere('angkatan', 'ilike', "%{$search}%");
             });
         }
-
         $mahasiswa = $query->orderByDesc('id')->get();
+        $filename = 'data-mahasiswa-'.date('Y-m-d').'.xlsx';
 
-        // Nama file hasil unduhan
-        $filename = 'data-mahasiswa-'.date('Y-m-d').'.csv';
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        ExcelExportService::setupSheet($sheet, 'Data Mahasiswa', 'Mahasiswa');
 
-        // response()->streamDownload = mengunduh file sambil menulis
-        // langsung ke output (hemat memori untuk data banyak).
-        return response()->streamDownload(function () use ($mahasiswa) {
-            $out = fopen('php://output', 'w');
+        $row = 1;
+        $lastCol = 'F';
+        ExcelExportService::addTitleBlock($sheet, 'Data Mahasiswa — SI Perwalian STMIK Bandung', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Filter: '.($request->input('search') ? 'search="'.$request->input('search').'"' : 'semua data').'  •  Total: '.$mahasiswa->count().' mahasiswa', $lastCol, $row);
 
-            // \xEF\xBB\xBF = BOM UTF-8. Dibutuhkan agar CSV yang dibuka
-            // di Excel tidak berubah menjadi karakter aneh (mojibake).
-            fwrite($out, "\xEF\xBB\xBF");
+        $headerRow = $row;
+        $headers = ['No', 'NPM', 'Nama Lengkap', 'Program Studi', 'Angkatan', 'Dosen Wali'];
+        $col = 'A';
+        foreach ($headers as $h) {
+            $sheet->setCellValue($col.$headerRow, $h);
+            $col++;
+        }
+        ExcelExportService::styleHeaderRow($sheet, "A{$headerRow}:{$lastCol}{$headerRow}");
 
-            // Baris pertama = judul kolom
-            fputcsv($out, ['NPM', 'Nama', 'Program Studi', 'Angkatan', 'Dosen Wali']);
+        $r = $headerRow + 1;
+        foreach ($mahasiswa as $i => $m) {
+            $sheet->setCellValue("A{$r}", $i + 1);
+            $sheet->setCellValue("B{$r}", $m->npm);
+            $sheet->setCellValue("C{$r}", $m->nama);
+            $sheet->setCellValue("D{$r}", $m->prodi);
+            $sheet->setCellValue("E{$r}", $m->angkatan);
+            $sheet->setCellValue("F{$r}", $m->dosenWali?->dosen?->nama ?? '— Belum ditentukan');
+            $sheet->getRowDimension($r)->setRowHeight(18);
+            $r++;
+        }
+        $lastDataRow = max($r - 1, $headerRow);
+        if ($mahasiswa->isNotEmpty()) {
+            ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
+            $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("E".($headerRow+1).":E{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            // No. column narrow
+        } else {
+            $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data sesuai filter.');
+            $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
+            $sheet->getStyle("A".($headerRow+1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $lastDataRow = $headerRow + 1;
+        }
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>14,'C'=>26,'D'=>22,'E'=>10,'F'=>28]);
+        // Footer
+        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa  •  Dicetak: '.now()->translatedFormat('d F Y H:i'));
+        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
 
-            // Satu baris per mahasiswa
-            foreach ($mahasiswa as $m) {
-                fputcsv($out, [
-                    $m->npm,
-                    $m->nama,
-                    $m->prodi,
-                    $m->angkatan,
-                    // ?-> = null-safe operator: jika dosenWali/dosen tidak
-                    // ada, pakai string kosong (tidak error).
-                    $m->dosenWali?->dosen?->nama ?? '',
-                ]);
-            }
-            fclose($out);
-        }, $filename, ['Content-Type' => 'text/csv; charset=UTF-8']);
+        return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
 
     // ===== FORM TAMBAH MAHASISWA (GET /admin/mahasiswa/create) =====
