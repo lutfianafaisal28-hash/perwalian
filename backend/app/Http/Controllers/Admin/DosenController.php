@@ -121,13 +121,18 @@ class DosenController extends Controller
         if ($dosen->isNotEmpty()) {
             ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
             $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("B".($headerRow+1).":B{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("E".($headerRow+1).":E{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            // Email kolom D: biar tidak kepotong, matikan wrap & pakai font sedikit lebih kecil
+            $sheet->getStyle("D".($headerRow+1).":D{$lastDataRow}")->getAlignment()->setWrapText(false)->setVertical(Alignment::VERTICAL_CENTER);
+            $sheet->getStyle("D".($headerRow+1).":D{$lastDataRow}")->getFont()->setSize(9);
+            $sheet->getStyle("C".($headerRow+1).":C{$lastDataRow}")->getAlignment()->setWrapText(true);
         } else {
             $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data.');
             $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
             $lastDataRow = $headerRow+1;
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>16,'C'=>30,'D'=>28,'E'=>14]);
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>15,'C'=>32,'D'=>38,'E'=>16]);
         $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
         $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
 
