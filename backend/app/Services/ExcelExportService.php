@@ -67,10 +67,11 @@ class ExcelExportService
         }
     }
 
-    // ── Data rows: zebra, thin borders, default font ──
+    // ── Data rows: zebra, thin borders, default font (skip header!) ──
     public static function styleDataRows(Worksheet $sheet, int $headerRow, int $lastRow, string $lastCol): void
     {
-        $range = "A{$headerRow}:{$lastCol}{$lastRow}";
+        $firstDataRow = $headerRow + 1;
+        $range = "A{$firstDataRow}:{$lastCol}{$lastRow}";
         $sheet->getStyle($range)->applyFromArray([
             'font' => [
                 'size'  => 9,
@@ -89,7 +90,7 @@ class ExcelExportService
             ],
         ]);
         // Zebra striping
-        for ($r = $headerRow + 1; $r <= $lastRow; $r++) {
+        for ($r = $firstDataRow; $r <= $lastRow; $r++) {
             if ($r % 2 === 0) {
                 $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
                     ->setFillType(Fill::FILL_SOLID)
