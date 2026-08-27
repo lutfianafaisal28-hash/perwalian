@@ -75,7 +75,11 @@ class MahasiswaController extends Controller
 
         $row = 1;
         $lastCol = 'F';
-        ExcelExportService::addTitleBlock($sheet, 'Data Mahasiswa — SI Perwalian STMIK Bandung', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Filter: '.($request->input('search') ? 'search="'.$request->input('search').'"' : 'semua data').'  •  Total: '.$mahasiswa->count().' mahasiswa', $lastCol, $row);
+        $filters = $request->filled('search') ? ['search="'.$request->input('search').'"'] : [];
+        ExcelExportService::addTitleBlock($sheet, 'Data Mahasiswa — SI Perwalian STMIK Bandung', $lastCol, $row, [
+            'total'   => $mahasiswa->count(),
+            'filters' => $filters,
+        ]);
 
         $headerRow = $row;
         $headers = ['No', 'NPM', 'Nama Lengkap', 'Program Studi', 'Angkatan', 'Dosen Wali'];

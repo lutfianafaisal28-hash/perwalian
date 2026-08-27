@@ -80,7 +80,13 @@ class BimbinganController extends Controller
 
         $row = 1;
         $lastCol = 'I';
-        ExcelExportService::addTitleBlock($sheet, 'Mahasiswa Bimbingan — '.$dosen->nama.' (STMIK Bandung)', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Total: '.$mahasiswa->count().' mahasiswa', $lastCol, $row);
+        $filters = [];
+        if ($request->filled('search')) $filters[] = 'search="'.$request->input('search').'"';
+        if ($request->filled('angkatan')) $filters[] = 'angkatan '.$request->input('angkatan');
+        ExcelExportService::addTitleBlock($sheet, 'Mahasiswa Bimbingan — '.$dosen->nama.' (STMIK Bandung)', $lastCol, $row, [
+            'total'   => $mahasiswa->count(),
+            'filters' => $filters,
+        ]);
 
         $headerRow = $row;
         foreach (['No','NPM','Nama','Program Studi','Angkatan','Tanggal','Semester','Hasil Diskusi','Kendala / Rencana'] as $i => $h) {

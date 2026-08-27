@@ -98,7 +98,11 @@ class DosenController extends Controller
 
         $row = 1;
         $lastCol = 'E';
-        ExcelExportService::addTitleBlock($sheet, 'Data Dosen — SI Perwalian STMIK Bandung', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Total: '.$dosen->count().' dosen'.($request->input('search') ? '  •  Filter: "'.$request->input('search').'"' : ''), $lastCol, $row);
+        $filters = $request->filled('search') ? ['search="'.$request->input('search').'"'] : [];
+        ExcelExportService::addTitleBlock($sheet, 'Data Dosen — SI Perwalian STMIK Bandung', $lastCol, $row, [
+            'total'   => $dosen->count(),
+            'filters' => $filters,
+        ]);
 
         $headerRow = $row;
         foreach (['No','NIDN','Nama Lengkap','Email','Jml. Bimbingan'] as $i => $h) {

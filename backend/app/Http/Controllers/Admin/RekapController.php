@@ -51,15 +51,16 @@ class RekapController extends Controller
 
         $row = 1;
         $lastCol = 'I';
-        $filterInfo = [];
-        if ($request->filled('search')) $filterInfo[] = 'search="'.$request->input('search').'"';
-        if ($request->filled('angkatan')) $filterInfo[] = 'angkatan='.$request->input('angkatan');
-        if ($request->filled('dosen_id')) $filterInfo[] = 'dosen wali';
-        if ($request->filled('dari')) $filterInfo[] = 'dari '.$request->input('dari');
-        if ($request->filled('sampai')) $filterInfo[] = 'sampai '.$request->input('sampai');
-        $filterStr = $filterInfo ? implode(', ', $filterInfo) : 'semua data';
-
-        ExcelExportService::addTitleBlock($sheet, 'Rekap Perwalian — SI Perwalian STMIK Bandung', 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB  •  Filter: '.$filterStr.'  •  Total: '.$perwalian->count().' catatan', $lastCol, $row);
+        $filters = [];
+        if ($request->filled('search')) $filters[] = 'search="'.$request->input('search').'"';
+        if ($request->filled('angkatan')) $filters[] = 'angkatan '.$request->input('angkatan');
+        if ($request->filled('dosen_id')) $filters[] = 'dosen wali';
+        if ($request->filled('dari')) $filters[] = 'dari '.$request->input('dari');
+        if ($request->filled('sampai')) $filters[] = 'sampai '.$request->input('sampai');
+        ExcelExportService::addTitleBlock($sheet, 'Rekap Perwalian — SI Perwalian STMIK Bandung', $lastCol, $row, [
+            'total'   => $perwalian->count(),
+            'filters' => $filters,
+        ]);
 
         $headerRow = $row;
         $headers = ['No','Tanggal','NPM','Nama Mahasiswa','Semester','Dosen Wali','Hasil Diskusi','Kendala','Rencana Perbaikan'];
