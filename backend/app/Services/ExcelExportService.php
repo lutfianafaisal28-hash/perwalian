@@ -101,7 +101,7 @@ class ExcelExportService
         $sheet->getDefaultRowDimension()->setRowHeight(18);
     }
 
-    // ── Title row: merged, navy bold, large ──
+    // ── Title row: merged, navy bold, large, centered ──
     public static function addTitle(Worksheet $sheet, string $title, string $lastCol, int &$row): void
     {
         $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
@@ -114,7 +114,7 @@ class ExcelExportService
                 'name'  => 'Calibri',
             ],
             'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
             ],
         ]);
@@ -132,7 +132,7 @@ class ExcelExportService
         $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
         $sheet->setCellValue("A{$row}", $fullText);
 
-        // Navy background with WHITE text for readability
+        // Navy background with WHITE text for readability — centered
         $sheet->getStyle("A{$row}")->applyFromArray([
             'font' => [
                 'bold'  => false,
@@ -141,7 +141,7 @@ class ExcelExportService
                 'name'  => 'Calibri',
             ],
             'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
                 'vertical'   => Alignment::VERTICAL_CENTER,
             ],
             'fill' => [
@@ -172,7 +172,7 @@ class ExcelExportService
                     'name'  => 'Calibri',
                 ],
                 'alignment' => [
-                    'horizontal' => Alignment::HORIZONTAL_LEFT,
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
                     'vertical'   => Alignment::VERTICAL_CENTER,
                 ],
                 'fill' => [
@@ -209,13 +209,14 @@ class ExcelExportService
         self::addDivider($sheet, $lastCol, $row);
     }
 
-    // ── Column widths, freeze pane, auto-filter, print setup ──
-    public static function finalize(Worksheet $sheet, int $headerRow, string $lastCol, array $widths, bool $autoFilter = true): void
+    // ── Column widths, freeze pane, print setup ──
+    public static function finalize(Worksheet $sheet, int $headerRow, string $lastCol, array $widths, bool $autoFilter = false): void
     {
         foreach ($widths as $col => $w) {
             $sheet->getColumnDimension($col)->setWidth($w);
         }
         $sheet->freezePane('A' . ($headerRow + 1));
+        // Auto-filter disabled by default — no dropdown arrows for clean look
         if ($autoFilter) {
             $sheet->setAutoFilter("A{$headerRow}:{$lastCol}{$headerRow}");
         }

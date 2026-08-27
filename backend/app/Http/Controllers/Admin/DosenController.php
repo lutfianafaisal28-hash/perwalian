@@ -137,8 +137,12 @@ class DosenController extends Controller
             $lastDataRow = $headerRow + 1;
         }
         ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 18, 'C' => 36, 'D' => 42, 'E' => 18]);
+        $sheet->mergeCells("A".($lastDataRow + 2).":{$lastCol}".($lastDataRow + 2));
         $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
-        $sheet->getStyle("A".($lastDataRow + 2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+        $sheet->getStyle("A".($lastDataRow + 2))->applyFromArray([
+            'font' => ['size' => 8, 'italic' => true, 'color' => ['rgb' => '64748B'], 'name' => 'Calibri'],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+        ]);
 
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }

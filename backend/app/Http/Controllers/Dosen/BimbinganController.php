@@ -133,8 +133,12 @@ class BimbinganController extends Controller
             $sheet->getStyle("H".($headerRow+1).":I{$lastDataRow}")->getAlignment()->setWrapText(true);
         }
         ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 15, 'C' => 28, 'D' => 24, 'E' => 12, 'F' => 14, 'G' => 12, 'H' => 44, 'I' => 40]);
+        $sheet->mergeCells("A".($lastDataRow + 2).":{$lastCol}".($lastDataRow + 2));
         $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian');
-        $sheet->getStyle("A".($lastDataRow + 2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+        $sheet->getStyle("A".($lastDataRow + 2))->applyFromArray([
+            'font' => ['size' => 8, 'italic' => true, 'color' => ['rgb' => '64748B'], 'name' => 'Calibri'],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+        ]);
 
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
