@@ -17,9 +17,9 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 // ============================================================
 class ExcelExportService
 {
-    public const NAVY       = '1E3A8A';
-    public const NAVY_DARK  = '172554';
-    public const NAVY_LIGHT = '2563EB';
+    public const NAVY       = '0F172A';
+    public const NAVY_DARK  = '020617';
+    public const NAVY_LIGHT = '1E40AF';
     public const EMERALD      = '10B981';
     public const EMERALD_LIGHT = 'D1FAE5';
     public const BLUE_LIGHT   = 'EFF6FF';
@@ -31,19 +31,20 @@ class ExcelExportService
     public const GRAY_800 = '1E293B';
     public const WHITE = 'FFFFFF';
 
-    // ── Header row: navy bg, white bold, center ──
+    // ── Header row: dark navy bg, WHITE bold text, center ──
     public static function styleHeaderRow(Worksheet $sheet, string $range): void
     {
+        // First pass: set all styles
         $sheet->getStyle($range)->applyFromArray([
             'font' => [
                 'bold'  => true,
-                'color' => ['rgb' => self::WHITE],
+                'color' => ['rgb' => 'FFFFFF'],
                 'size'  => 10,
                 'name'  => 'Calibri',
             ],
             'fill' => [
                 'fillType'   => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => self::NAVY],
+                'startColor' => ['rgb' => '0F172A'],
             ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -51,12 +52,16 @@ class ExcelExportService
                 'wrapText'   => true,
             ],
             'borders' => [
-                'top'    => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => self::NAVY_DARK]],
-                'bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => self::NAVY_DARK]],
-                'left'   => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => self::GRAY_300]],
-                'right'  => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => self::GRAY_300]],
+                'top'    => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '020617']],
+                'bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '020617']],
+                'left'   => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => 'CBD5E1']],
+                'right'  => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => 'CBD5E1']],
             ],
         ]);
+        // Second pass: force WHITE font color (ensure no override)
+        $sheet->getStyle($range)->getFont()->getColor()->setRGB('FFFFFF');
+        $sheet->getStyle($range)->getFont()->setBold(true);
+
         if (preg_match('/([A-Z]+)(\d+):/', $range, $m)) {
             $sheet->getRowDimension((int) $m[2])->setRowHeight(24);
         }
@@ -132,12 +137,12 @@ class ExcelExportService
         $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
         $sheet->setCellValue("A{$row}", $fullText);
 
-        // Navy background with WHITE text for readability — centered
+        // Dark navy background with WHITE text for readability — centered
         $sheet->getStyle("A{$row}")->applyFromArray([
             'font' => [
                 'bold'  => false,
                 'size'  => 9,
-                'color' => ['rgb' => self::WHITE],
+                'color' => ['rgb' => 'FFFFFF'],
                 'name'  => 'Calibri',
             ],
             'alignment' => [
@@ -146,15 +151,17 @@ class ExcelExportService
             ],
             'fill' => [
                 'fillType'   => Fill::FILL_SOLID,
-                'startColor' => ['rgb' => self::NAVY_DARK],
+                'startColor' => ['rgb' => '020617'],
             ],
             'borders' => [
-                'top'    => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
-                'bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
-                'left'   => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
-                'right'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                'top'    => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
+                'bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
+                'left'   => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
+                'right'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
             ],
         ]);
+        // Second pass: force WHITE font
+        $sheet->getStyle("A{$row}")->getFont()->getColor()->setRGB('FFFFFF');
 
         $sheet->getRowDimension($row)->setRowHeight(18);
         $row++;
@@ -168,7 +175,7 @@ class ExcelExportService
                 'font' => [
                     'bold'  => false,
                     'size'  => 8,
-                    'color' => ['rgb' => self::WHITE],
+                    'color' => ['rgb' => 'FFFFFF'],
                     'name'  => 'Calibri',
                 ],
                 'alignment' => [
@@ -177,13 +184,15 @@ class ExcelExportService
                 ],
                 'fill' => [
                     'fillType'   => Fill::FILL_SOLID,
-                    'startColor' => ['rgb' => self::NAVY_LIGHT],
+                    'startColor' => ['rgb' => '1E40AF'],
                 ],
                 'borders' => [
-                    'left'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
-                    'right' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                    'left'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
+                    'right' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => '0F172A']],
                 ],
             ]);
+            // Second pass: force WHITE font
+            $sheet->getStyle("A{$row}")->getFont()->getColor()->setRGB('FFFFFF');
             $sheet->getRowDimension($row)->setRowHeight(14);
             $row++;
         }
