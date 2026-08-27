@@ -17,23 +17,48 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 // ============================================================
 class ExcelExportService
 {
-    public const NAVY = '1E3A8A';
-    public const NAVY_DARK = '172554';
-    public const EMERALD = '10B981';
+    public const NAVY       = '1E3A8A';
+    public const NAVY_DARK  = '172554';
+    public const NAVY_LIGHT = '2563EB';
+    public const EMERALD      = '10B981';
     public const EMERALD_LIGHT = 'D1FAE5';
-    public const BLUE_LIGHT = 'EFF6FF';
+    public const BLUE_LIGHT   = 'EFF6FF';
+    public const GRAY_50  = 'F8FAFC';
+    public const GRAY_100 = 'F1F5F9';
+    public const GRAY_200 = 'E2E8F0';
+    public const GRAY_300 = 'CBD5E1';
+    public const GRAY_600 = '475569';
+    public const GRAY_800 = '1E293B';
+    public const WHITE = 'FFFFFF';
 
     // ── Header row: navy bg, white bold, center ──
     public static function styleHeaderRow(Worksheet $sheet, string $range): void
     {
         $sheet->getStyle($range)->applyFromArray([
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 10, 'name' => 'Calibri'],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::NAVY]],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'CBD5E1']]],
+            'font' => [
+                'bold'  => true,
+                'color' => ['rgb' => self::WHITE],
+                'size'  => 10,
+                'name'  => 'Calibri',
+            ],
+            'fill' => [
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => self::NAVY],
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+                'wrapText'   => true,
+            ],
+            'borders' => [
+                'top'    => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => self::NAVY_DARK]],
+                'bottom' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => self::NAVY_DARK]],
+                'left'   => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => self::GRAY_300]],
+                'right'  => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => self::GRAY_300]],
+            ],
         ]);
         if (preg_match('/([A-Z]+)(\d+):/', $range, $m)) {
-            $sheet->getRowDimension((int) $m[2])->setRowHeight(22);
+            $sheet->getRowDimension((int) $m[2])->setRowHeight(24);
         }
     }
 
@@ -42,14 +67,28 @@ class ExcelExportService
     {
         $range = "A{$headerRow}:{$lastCol}{$lastRow}";
         $sheet->getStyle($range)->applyFromArray([
-            'font'      => ['size' => 9, 'name' => 'Calibri', 'color' => ['rgb' => '1F2937']],
-            'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'wrapText' => true],
-            'borders'   => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
+            'font' => [
+                'size'  => 9,
+                'name'  => 'Calibri',
+                'color' => ['rgb' => self::GRAY_800],
+            ],
+            'alignment' => [
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'top'    => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::GRAY_200]],
+                'bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::GRAY_200]],
+                'left'   => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::GRAY_200]],
+                'right'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::GRAY_200]],
+            ],
         ]);
+        // Zebra striping
         for ($r = $headerRow + 1; $r <= $lastRow; $r++) {
             if ($r % 2 === 0) {
                 $sheet->getStyle("A{$r}:{$lastCol}{$r}")->getFill()
-                    ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('F8FAFC');
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB(self::GRAY_50);
             }
         }
     }
@@ -68,56 +107,82 @@ class ExcelExportService
         $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
         $sheet->setCellValue("A{$row}", $title);
         $sheet->getStyle("A{$row}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 13, 'color' => ['rgb' => self::NAVY], 'name' => 'Calibri'],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'font' => [
+                'bold'  => true,
+                'size'  => 14,
+                'color' => ['rgb' => self::NAVY],
+                'name'  => 'Calibri',
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
         ]);
-        $sheet->getRowDimension($row)->setRowHeight(22);
+        $sheet->getRowDimension($row)->setRowHeight(26);
         $row++;
     }
 
-    // ── Subtitle row: timestamp + green badge + filter pills ──
-    //   $total  = e.g. 12
-    //   $filters = e.g. ['search="budi"', 'angkatan 2023']
+    // ── Subtitle row: navy bg, white text, timestamp + total badge ──
     public static function addSubtitle(Worksheet $sheet, string $lastCol, int &$row, int $total, array $filters = []): void
     {
         $timestamp = 'Diekspor: '.now()->translatedFormat('d F Y H:i').' WIB';
-
-        // Build text: timestamp on left, badge info as text
-        $badgeText = 'Total: '.$total.' data';
-        $fullText = $timestamp.'     '.$badgeText;
+        $badgeText = '  Total: '.$total.' data';
+        $fullText  = $timestamp.'     '.$badgeText;
 
         $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
         $sheet->setCellValue("A{$row}", $fullText);
 
-        // Style: dark gray text, left aligned
+        // Navy background with WHITE text for readability
         $sheet->getStyle("A{$row}")->applyFromArray([
-            'font'      => ['size' => 9, 'color' => ['rgb' => '475569'], 'name' => 'Calibri'],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'font' => [
+                'bold'  => false,
+                'size'  => 9,
+                'color' => ['rgb' => self::WHITE],
+                'name'  => 'Calibri',
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+            'fill' => [
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => self::NAVY_DARK],
+            ],
+            'borders' => [
+                'top'    => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                'bottom' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                'left'   => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                'right'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+            ],
         ]);
 
-        // Green badge: we cannot style partial merged cell, so apply
-        // green fill to the whole row. The badge text is visually prominent.
-        $sheet->getStyle("A{$row}")->applyFromArray([
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::EMERALD_LIGHT]],
-        ]);
-
-        // Re-apply font (fill override) with bold badge look
-        $sheet->getStyle("A{$row}")->applyFromArray([
-            'font' => ['bold' => false, 'size' => 9, 'color' => ['rgb' => '065F46'], 'name' => 'Calibri'],
-        ]);
-
-        $sheet->getRowDimension($row)->setRowHeight(16);
+        $sheet->getRowDimension($row)->setRowHeight(18);
         $row++;
 
-        // Filter pills row (only if filters exist)
+        // Filter pills row (only if filters exist) — white text on navy-light
         if (!empty($filters)) {
-            $pillText = 'Filter aktif:  '.implode('  |  ', array_map(fn($f) => ' '.$f.' ', $filters));
+            $pillText = 'Filter:  '.implode('  |  ', array_map(fn($f) => ' '.$f.' ', $filters));
             $sheet->mergeCells("A{$row}:{$lastCol}{$row}");
             $sheet->setCellValue("A{$row}", $pillText);
             $sheet->getStyle("A{$row}")->applyFromArray([
-                'font'      => ['size' => 8, 'color' => ['rgb' => '1E3A8A'], 'name' => 'Calibri'],
-                'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
-                'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => self::BLUE_LIGHT]],
+                'font' => [
+                    'bold'  => false,
+                    'size'  => 8,
+                    'color' => ['rgb' => self::WHITE],
+                    'name'  => 'Calibri',
+                ],
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_LEFT,
+                    'vertical'   => Alignment::VERTICAL_CENTER,
+                ],
+                'fill' => [
+                    'fillType'   => Fill::FILL_SOLID,
+                    'startColor' => ['rgb' => self::NAVY_LIGHT],
+                ],
+                'borders' => [
+                    'left'  => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                    'right' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => self::NAVY]],
+                ],
             ]);
             $sheet->getRowDimension($row)->setRowHeight(14);
             $row++;
@@ -128,7 +193,7 @@ class ExcelExportService
     public static function addDivider(Worksheet $sheet, string $lastCol, int &$row): void
     {
         $sheet->getStyle("A{$row}:{$lastCol}{$row}")->getFill()
-            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB('CBD5E1');
+            ->setFillType(Fill::FILL_SOLID)->getStartColor()->setRGB(self::GRAY_300);
         $sheet->getRowDimension($row)->setRowHeight(2);
         $row++;
     }
@@ -172,7 +237,7 @@ class ExcelExportService
             $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
             $writer->save('php://output');
         }, $filename, [
-            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Type'  => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Cache-Control' => 'max-age=0',
         ]);
     }

@@ -98,7 +98,7 @@ class MahasiswaController extends Controller
             $sheet->setCellValue("D{$r}", $m->prodi);
             $sheet->setCellValue("E{$r}", $m->angkatan);
             $sheet->setCellValue("F{$r}", $m->dosenWali?->dosen?->nama ?? '— Belum ditentukan');
-            $sheet->getRowDimension($r)->setRowHeight(18);
+            $sheet->getRowDimension($r)->setRowHeight(20);
             $r++;
         }
         $lastDataRow = max($r - 1, $headerRow);
@@ -106,17 +106,15 @@ class MahasiswaController extends Controller
             ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
             $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("E".($headerRow+1).":E{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            // No. column narrow
         } else {
             $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data sesuai filter.');
             $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
             $sheet->getStyle("A".($headerRow+1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $lastDataRow = $headerRow + 1;
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>14,'C'=>26,'D'=>22,'E'=>10,'F'=>28]);
-        // Footer
-        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa  •  Dicetak: '.now()->translatedFormat('d F Y H:i'));
-        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 16, 'C' => 30, 'D' => 28, 'E' => 12, 'F' => 30]);
+        $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa  •  Dicetak: '.now()->translatedFormat('d F Y H:i'));
+        $sheet->getStyle("A".($lastDataRow + 2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
 
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }

@@ -113,32 +113,32 @@ class DosenController extends Controller
 
         $r = $headerRow + 1;
         foreach ($dosen as $idx => $d) {
-            $sheet->setCellValue("A{$r}", $idx+1);
+            $sheet->setCellValue("A{$r}", $idx + 1);
             $sheet->setCellValue("B{$r}", $d->nidn);
             $sheet->setCellValue("C{$r}", $d->nama);
             $sheet->setCellValue("D{$r}", $d->user?->email ?? '—');
             $sheet->setCellValue("E{$r}", $d->mahasiswa_bimbingan_count);
-            $sheet->getRowDimension($r)->setRowHeight(18);
+            $sheet->getRowDimension($r)->setRowHeight(20);
             $r++;
         }
-        $lastDataRow = max($r-1, $headerRow);
+        $lastDataRow = max($r - 1, $headerRow);
         if ($dosen->isNotEmpty()) {
             ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
             $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("B".($headerRow+1).":B{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("E".($headerRow+1).":E{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            // Email kolom D: biar tidak kepotong, matikan wrap & pakai font sedikit lebih kecil
             $sheet->getStyle("D".($headerRow+1).":D{$lastDataRow}")->getAlignment()->setWrapText(false)->setVertical(Alignment::VERTICAL_CENTER);
             $sheet->getStyle("D".($headerRow+1).":D{$lastDataRow}")->getFont()->setSize(9);
             $sheet->getStyle("C".($headerRow+1).":C{$lastDataRow}")->getAlignment()->setWrapText(true);
         } else {
             $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data.');
             $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
-            $lastDataRow = $headerRow+1;
+            $sheet->getStyle("A".($headerRow+1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $lastDataRow = $headerRow + 1;
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>15,'C'=>32,'D'=>38,'E'=>16]);
-        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
-        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 18, 'C' => 36, 'D' => 42, 'E' => 18]);
+        $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
+        $sheet->getStyle("A".($lastDataRow + 2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
 
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }

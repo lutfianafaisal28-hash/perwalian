@@ -71,7 +71,7 @@ class RekapController extends Controller
 
         $r = $headerRow + 1;
         foreach ($perwalian as $idx => $p) {
-            $sheet->setCellValue("A{$r}", $idx+1);
+            $sheet->setCellValue("A{$r}", $idx + 1);
             $sheet->setCellValue("B{$r}", $p->tanggal?->translatedFormat('d MMM yyyy') ?? '');
             $sheet->setCellValue("C{$r}", $p->mahasiswa?->npm ?? '');
             $sheet->setCellValue("D{$r}", $p->mahasiswa?->nama ?? '');
@@ -80,10 +80,10 @@ class RekapController extends Controller
             $sheet->setCellValue("G{$r}", $p->hasil_perwalian);
             $sheet->setCellValue("H{$r}", $p->kendala ?? '—');
             $sheet->setCellValue("I{$r}", $p->rencana_perbaikan ?? '—');
-            $sheet->getRowDimension($r)->setRowHeight(32);
+            $sheet->getRowDimension($r)->setRowHeight(36);
             $r++;
         }
-        $lastDataRow = max($r-1, $headerRow);
+        $lastDataRow = max($r - 1, $headerRow);
         if ($perwalian->isNotEmpty()) {
             ExcelExportService::styleDataRows($sheet, $headerRow, $lastDataRow, $lastCol);
             $sheet->getStyle("A".($headerRow+1).":A{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -94,11 +94,11 @@ class RekapController extends Controller
             $sheet->setCellValue("A".($headerRow+1), 'Tidak ada data sesuai filter.');
             $sheet->mergeCells("A".($headerRow+1).":{$lastCol}".($headerRow+1));
             $sheet->getStyle("A".($headerRow+1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $lastDataRow = $headerRow+1;
+            $lastDataRow = $headerRow + 1;
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A'=>5,'B'=>13,'C'=>13,'D'=>24,'E'=>11,'F'=>24,'G'=>38,'H'=>28,'I'=>32]);
-        $sheet->setCellValue("A".($lastDataRow+2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
-        $sheet->getStyle("A".($lastDataRow+2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 14, 'C' => 15, 'D' => 28, 'E' => 12, 'F' => 28, 'G' => 40, 'H' => 32, 'I' => 36]);
+        $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
+        $sheet->getStyle("A".($lastDataRow + 2))->getFont()->setSize(7)->setItalic(true)->getColor()->setRGB('64748B');
 
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
