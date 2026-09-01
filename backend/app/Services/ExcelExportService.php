@@ -241,6 +241,27 @@ class ExcelExportService
         $sheet->setShowGridLines(false);
     }
 
+    // ── Calculate row height based on content length ──
+    // columnWidths = array of column widths in characters
+    // texts = array of cell values for that row
+    public static function calcRowHeight(array $texts, array $columnWidths, int $minHeight = 20, int $lineHeight = 15): int
+    {
+        $maxLines = 1;
+        foreach ($texts as $colIdx => $text) {
+            if ($text === null || $text === '') continue;
+            $text = (string) $text;
+            $width = $columnWidths[$colIdx] ?? 30;
+            // approx chars per line: column width * 1.1 (account for CJK/wide chars)
+            $charsPerLine = max(1, (int) ($width * 1.1));
+            // count explicit newlines + estimated wrapped lines
+            $newlines = substr_count($text, "\n") + 1;
+            $wrappedLines = max(1, (int) ceil(mb_strlen($text) / $charsPerLine));
+            $totalLines = $newlines * $wrappedLines;
+            $maxLines = max($maxLines, $totalLines);
+        }
+        return max($minHeight, $maxLines * $lineHeight + 6);
+    }
+
     // ── Download response helper ──
     public static function downloadResponse(Spreadsheet $spreadsheet, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
     {

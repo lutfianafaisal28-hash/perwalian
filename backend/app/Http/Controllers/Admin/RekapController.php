@@ -69,6 +69,7 @@ class RekapController extends Controller
         }
         ExcelExportService::styleHeaderRow($sheet, "A{$headerRow}:{$lastCol}{$headerRow}");
 
+        $colWidths = [6, 14, 15, 28, 12, 28, 40, 36, 40];
         $r = $headerRow + 1;
         foreach ($perwalian as $idx => $p) {
             $sheet->setCellValue("A{$r}", $idx + 1);
@@ -80,7 +81,10 @@ class RekapController extends Controller
             $sheet->setCellValue("G{$r}", $p->hasil_perwalian);
             $sheet->setCellValue("H{$r}", $p->kendala ?? '—');
             $sheet->setCellValue("I{$r}", $p->rencana_perbaikan ?? '—');
-            $sheet->getRowDimension($r)->setRowHeight(36);
+            // Dynamic row height based on content
+            $texts = [$p->hasil_perwalian, $p->kendala ?? '', $p->rencana_perbaikan ?? ''];
+            $rowHeight = ExcelExportService::calcRowHeight($texts, [40, 36, 40], 20, 14);
+            $sheet->getRowDimension($r)->setRowHeight($rowHeight);
             $r++;
         }
         $lastDataRow = max($r - 1, $headerRow);
@@ -96,7 +100,7 @@ class RekapController extends Controller
             $sheet->getStyle("A".($headerRow+1))->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $lastDataRow = $headerRow + 1;
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 14, 'C' => 15, 'D' => 28, 'E' => 12, 'F' => 28, 'G' => 40, 'H' => 32, 'I' => 36]);
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 14, 'C' => 15, 'D' => 28, 'E' => 12, 'F' => 28, 'G' => 40, 'H' => 36, 'I' => 40]);
         $sheet->mergeCells("A".($lastDataRow + 2).":{$lastCol}".($lastDataRow + 2));
         $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian Mahasiswa');
         $sheet->getStyle("A".($lastDataRow + 2))->applyFromArray([

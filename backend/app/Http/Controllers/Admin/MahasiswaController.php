@@ -123,6 +123,186 @@ class MahasiswaController extends Controller
         return ExcelExportService::downloadResponse($spreadsheet, $filename);
     }
 
+    // ===== FORM IMPORT MAHASISWA DARI EXCEL (GET /admin/mahasiswa/import) =====
+    public function importForm()
+    {
+        return view('admin.mahasiswa.import');
+    }
+
+    // ===== PROSES IMPORT MAHASISWA DARI EXCEL (POST /admin/mahasiswa/import) =====
+    public function importProcess(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,xls|max:10240',
+        ]);
+
+        $file = $request->file('file');
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($file->getRealPath());
+        $sheet = $spreadsheet->getActiveSheet();
+        $rows = $sheet->toArray();
+
+        if (count($rows) < 2) {
+            return back()->withErrors(['file' => 'File Excel kosong atau tidak memiliki data.']);
+        }
+
+        // Baris pertama = header — deteksi otomatis kolom mana yang mana
+        $header = array_map(fn($h) => strtolower(trim($h)), $rows[0]);
+
+        // Map header fleksibel: terima variasi nama kolom
+        $colMap = [];
+        foreach ($header as $idx => $h) {
+            if (in_array($h, ['npm']))                         $colMap['npm'] = $idx;
+            elseif (in_array($h, ['nama', 'nama lengkap']))   $colMap['nama'] = $idx;
+            elseif (in_array($h, ['prodi', 'program studi', 'program_studi'])) $colMap['prodi'] = $idx;
+            elseif (in_array($h, ['angkatan', 'angkatan']))   $colMap['angkatan'] = $idx;
+        }
+
+        // Pastikan semua kolom wajib ditemukan
+        $missing = array_diff(['npm', 'nama', 'prodi', 'angkatan'], array_keys($colMap));
+        if (!empty($missing)) {
+            $kolom = implode(', ', $missing);
+            return back()->withErrors(['file' => "Kolom tidak ditemukan: {$kolom}. Pastikan header Excel: NPM, Nama Lengkap, Program Studi, Angkatan."]);
+        }
+
+        $success = 0;
+        $skipped = 0;
+        $errors = [];
+
+        for ($i = 1; $i < count($rows); $i++) {
+            $row = $rows[$i];
+            $npm = trim((string) ($row[$colMap['npm']] ?? ''));
+            $nama = trim((string) ($row[$colMap['nama']] ?? ''));
+            $prodi = trim((string) ($row[$colMap['prodi']] ?? ''));
+            $angkatan = trim((string) ($row[$colMap['angkatan']] ?? ''));
+
+            // Skip baris kosong
+            if ($npm === '' && $nama === '') {
+                $skipped++;
+                continue;
+            }
+
+            // Validasi wajib isi
+            if ($npm === '' || $nama === '' || $prodi === '' || $angkatan === '') {
+                $errors[] = "Baris ".($i+1).": data tidak lengkap (NPM: {$npm})";
+                $skipped++;
+                continue;
+            }
+
+            // Cek NPM unik
+            if (Mahasiswa::where('npm', $npm)->exists()) {
+                $errors[] = "Baris ".($i+1).": NPM {$npm} sudah ada";
+                $skipped++;
+                continue;
+            }
+
+            // Buat akun login
+            $user = User::create([
+                'name' => $nama,
+                'username' => $npm,
+                'email' => null,
+                'role' => User::ROLE_MAHASISWA,
+                'password' => '123456',
+            ]);
+
+            // Buat data mahasiswa
+            Mahasiswa::create([
+                'user_id' => $user->id,
+                'npm' => $npm,
+                'nama' => $nama,
+                'prodi' => $prodi,
+                'angkatan' => $angkatan,
+            ]);
+
+            $success++;
+        }
+
+        $msg = "Import selesai: {$success} data berhasil ditambahkan.";
+        if ($skipped > 0) {
+            $msg .= " {$skipped} data dilewati.";
+        }
+
+        if (!empty($errors)) {
+            $msg .= "\n".implode("\n", array_slice($errors, 0, 10));
+            if (count($errors) > 10) {
+                $msg .= "\n... dan ".(count($errors)-10)." error lainnya.";
+            }
+        }
+
+        return redirect()
+            ->route('admin.mahasiswa.index')
+            ->with('success', $msg);
+    }
+
+    // ===== DOWNLOAD TEMPLATE IMPORT (GET /admin/mahasiswa/import/template) =====
+    public function importTemplate()
+    {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Template Mahasiswa');
+
+        // Header — harus sesuai: NPM, Nama Lengkap, Program Studi, Angkatan
+        $headers = ['NPM', 'Nama Lengkap', 'Program Studi', 'Angkatan'];
+        foreach ($headers as $i => $h) {
+            $col = chr(65 + $i);
+            $sheet->setCellValue("{$col}1", $h);
+        }
+
+        // Style header: navy bg, white bold text
+        $sheet->getStyle('A1:D1')->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11, 'name' => 'Calibri'],
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => '0F172A']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+            'borders' => [
+                'bottom' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN, 'color' => ['rgb' => 'CBD5E1']],
+            ],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(24);
+
+        // Format kolom
+        $sheet->getColumnDimension('A')->setWidth(18);
+        $sheet->getColumnDimension('B')->setWidth(32);
+        $sheet->getColumnDimension('C')->setWidth(28);
+        $sheet->getColumnDimension('D')->setWidth(14);
+
+        // 100 data mahasiswa contoh
+        $prodiList = ['Teknik Informatika', 'Sistem Informasi', 'Manajemen Informatika', 'Teknik Komputer'];
+        $angkatanList = ['2022', '2023', '2024', '2025'];
+        $namaDepan = ['Andi', 'Budi', 'Citra', 'Dewi', 'Eka', 'Fajar', 'Gita', 'Hadi', 'Indah', 'Joko',
+                       'Kartika', 'Lukman', 'Maya', 'Nanda', 'Omar', 'Putri', 'Rizky', 'Sari', 'Tono', 'Ulya',
+                       'Vina', 'Wira', 'Xenia', 'Yoga', 'Zain'];
+        $namaBelakang = ['Pratama', 'Putra', 'Putri', 'Sari', 'Saputra', 'Handayani', 'Susanto', 'Wijaya',
+                          'Ramadhan', 'Purnama', 'Setiawan', 'Hidayat', 'Kurniawan', 'Santoso', 'Lestari'];
+
+        for ($i = 0; $i < 100; $i++) {
+            $row = $i + 2;
+            $npm = '230' . str_pad($i + 1, 4, '0', STR_PAD_LEFT);
+            $nama = $namaDepan[array_rand($namaDepan)] . ' ' . $namaBelakang[array_rand($namaBelakang)];
+            $prodi = $prodiList[array_rand($prodiList)];
+            $angkatan = $angkatanList[array_rand($angkatanList)];
+
+            $sheet->setCellValue("A{$row}", $npm);
+            $sheet->setCellValue("B{$row}", $nama);
+            $sheet->setCellValue("C{$row}", $prodi);
+            $sheet->setCellValue("D{$row}", $angkatan);
+        }
+
+        // Zebra striping
+        for ($r = 2; $r <= 101; $r++) {
+            if ($r % 2 === 0) {
+                $sheet->getStyle("A{$r}:D{$r}")->getFill()
+                    ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('F8FAFC');
+            }
+            $sheet->getRowDimension($r)->setRowHeight(18);
+        }
+
+        // Freeze header
+        $sheet->freezePane('A2');
+
+        $filename = 'template-import-mahasiswa.xlsx';
+        return ExcelExportService::downloadResponse($spreadsheet, $filename);
+    }
+
     // ===== FORM TAMBAH MAHASISWA (GET /admin/mahasiswa/create) =====
     public function create()
     {

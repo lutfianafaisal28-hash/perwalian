@@ -121,7 +121,10 @@ class BimbinganController extends Controller
                 $sheet->setCellValue("G{$r}", 'Semester '.$p->semester);
                 $sheet->setCellValue("H{$r}", $p->hasil_perwalian);
                 $sheet->setCellValue("I{$r}", ($p->kendala ? "Kendala: {$p->kendala}\n" : '').($p->rencana_perbaikan ? "Rencana: {$p->rencana_perbaikan}" : '—'));
-                $sheet->getRowDimension($r)->setRowHeight(40);
+                // Dynamic row height based on content
+                $texts = [$p->hasil_perwalian, $p->kendala ?? '', $p->rencana_perbaikan ?? ''];
+                $rowHeight = ExcelExportService::calcRowHeight($texts, [44, 36, 40], 24, 14);
+                $sheet->getRowDimension($r)->setRowHeight($rowHeight);
                 $r++;
             }
         }
@@ -132,7 +135,7 @@ class BimbinganController extends Controller
             $sheet->getStyle("E".($headerRow+1).":G{$lastDataRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
             $sheet->getStyle("H".($headerRow+1).":I{$lastDataRow}")->getAlignment()->setWrapText(true);
         }
-        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 15, 'C' => 28, 'D' => 24, 'E' => 12, 'F' => 14, 'G' => 12, 'H' => 44, 'I' => 40]);
+        ExcelExportService::finalize($sheet, $headerRow, $lastCol, ['A' => 6, 'B' => 15, 'C' => 28, 'D' => 24, 'E' => 12, 'F' => 14, 'G' => 12, 'H' => 44, 'I' => 44]);
         $sheet->mergeCells("A".($lastDataRow + 2).":{$lastCol}".($lastDataRow + 2));
         $sheet->setCellValue("A".($lastDataRow + 2), '© '.date('Y').' STMIK Bandung — SI Perwalian');
         $sheet->getStyle("A".($lastDataRow + 2))->applyFromArray([

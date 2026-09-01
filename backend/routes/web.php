@@ -60,6 +60,9 @@ Route::middleware('auth')->group(function () {
         // Export data mahasiswa ke CSV (harus didefinisikan SEBELUM
         // route resource mahasiswa, agar tidak "tertelan" oleh {mahasiswa})
         Route::get('mahasiswa/export', [AdminMahasiswaController::class, 'exportCsv'])->name('mahasiswa.export');
+        Route::get('mahasiswa/import', [AdminMahasiswaController::class, 'importForm'])->name('mahasiswa.import');
+        Route::post('mahasiswa/import', [AdminMahasiswaController::class, 'importProcess'])->name('mahasiswa.import.process');
+        Route::get('mahasiswa/import/template', [AdminMahasiswaController::class, 'importTemplate'])->name('mahasiswa.import.template');
 
         // Route::resource = membuat 7 route sekaligus untuk CRUD mahasiswa:
         //   index (daftar), create (form baru), store (simpan),

@@ -17,11 +17,9 @@
             </div>
             <button class="btn btn-primary" type="submit">Cari</button>
         </form>
-        <div class="d-flex gap-2">
-            {{-- Export CSV: request()->query() = ikutkan filter pencarian yang aktif
-                 supaya hasil ekspor sama dengan yang tampil di layar. --}}
-            <a href="{{ route('admin.mahasiswa.export', request()->query()) }}" class="btn btn-outline-secondary">
-                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Excel
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ route('admin.mahasiswa.import') }}" class="btn btn-outline-primary">
+                <i class="bi bi-upload me-1"></i> Import Excel
             </a>
             <a href="{{ route('admin.mahasiswa.create') }}" class="btn btn-success">
                 <i class="bi bi-plus-lg me-1"></i> Tambah Mahasiswa
